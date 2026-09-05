@@ -1,5 +1,6 @@
 package ru.florestdev.dvizhukha_forge.entity;
 
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -22,6 +23,7 @@ import net.minecraft.world.entity.animal.pig.Pig;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.SubscribeEvent;
+import ru.florestdev.dvizhukha_forge.Dvizhukha_forge;
 
 public class Khokhol extends Pig {
     private float scale = 1.5f;
@@ -128,6 +130,8 @@ public class Khokhol extends Pig {
                             ),
                             false
                     );
+                    player.sendSystemMessage(Component.literal("§cДержи свой клинок на 15 ударов, но с мощностью в -9 сердец за один удар!"));
+                    Dvizhukha_forge.getKhokholKnight().giveToPlayer(player, player.getName().getString());
                 }
             }
         }

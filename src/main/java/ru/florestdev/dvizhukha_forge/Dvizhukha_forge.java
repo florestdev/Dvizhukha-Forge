@@ -2,8 +2,8 @@ package ru.florestdev.dvizhukha_forge;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.NameAndId;
@@ -12,6 +12,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -25,6 +26,7 @@ import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
 import ru.florestdev.dvizhukha_forge.entity.Khokhol;
+import ru.florestdev.dvizhukha_forge.KhokholKnight;
 
 import java.util.List;
 import java.util.Random;
@@ -35,10 +37,15 @@ public class Dvizhukha_forge {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Random RANDOM = new Random();
 
+    // Регистрация сущностей
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
             DeferredRegister.create(Registries.ENTITY_TYPE, MOD_ID);
 
+    // Регистрация предметов
+    public static final DeferredRegister<Item> ITEMS =
+            DeferredRegister.create(Registries.ITEM, MOD_ID);
 
+    // Регистрация сущности Khokhol
     public static final DeferredHolder<EntityType<?>, EntityType<Khokhol>> KHOKHOL =
             ENTITY_TYPES.register(
                     "khokhol",
@@ -48,18 +55,37 @@ public class Dvizhukha_forge {
                                     Identifier.fromNamespaceAndPath(MOD_ID, "khokhol")))
             );
 
+    // Регистрация меча KhokholKnight
+    // Регистрация меча KhokholKnight
+    public static final DeferredHolder<Item, KhokholKnight> KHOKHOL_KNIGHT =
+            ITEMS.register(
+                    "khokhol_knight",
+                    () -> new KhokholKnight(
+                            new Item.Properties().setId(
+                                    ResourceKey.create(Registries.ITEM, Identifier.fromNamespaceAndPath(MOD_ID, "khokhol_knight"))
+                            )
+                    )
+            );
+
     private int tickCounter = 0;
     private static final int SPAWN_INTERVAL = 6000;
+
+    // Статический геттер для доступа к мечу из других классов
+    public static KhokholKnight getKhokholKnight() {
+        return KHOKHOL_KNIGHT.get();
+    }
 
     public Dvizhukha_forge(IEventBus modEventBus) {
         LOGGER.info("Dvizhukha mod initialized!");
 
+        // Регистрируем все DeferredRegister
         ENTITY_TYPES.register(modEventBus);
+        ITEMS.register(modEventBus);
 
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerAttributes);
 
-        // ВАЖНО: Регистрируем клиентский setup
+        // Регистрируем клиентский setup
         modEventBus.addListener(ClientSetup::onClientSetup);
 
         NeoForge.EVENT_BUS.register(this);
@@ -67,6 +93,12 @@ public class Dvizhukha_forge {
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         LOGGER.info("Dvizhukha common setup completed!");
+
+        // Дополнительная инициализация при необходимости
+        event.enqueueWork(() -> {
+            LOGGER.info("KhokholKnight initialized with ID: {}",
+                    KHOKHOL_KNIGHT.getId().toString());
+        });
     }
 
     private void registerAttributes(EntityAttributeCreationEvent event) {
@@ -82,11 +114,11 @@ public class Dvizhukha_forge {
         }
     }
 
-
     @SubscribeEvent
     public void onRegisterCommands(RegisterCommandsEvent event) {
         var dispatcher = event.getDispatcher();
 
+        // Команда /khokhol - спавн хохла
         dispatcher.register(
                 net.minecraft.commands.Commands.literal("khokhol")
                         .executes(context -> {
@@ -149,6 +181,7 @@ public class Dvizhukha_forge {
         Level world = player.level();
         var playerPos = player.blockPosition();
 
+        // Спавн молнии
         var lightning = EntityType.LIGHTNING_BOLT.create(world, EntitySpawnReason.COMMAND);
         if (lightning != null) {
             lightning.setPos(playerPos.getX() + 0.5, playerPos.getY(), playerPos.getZ() + 0.5);
@@ -159,6 +192,7 @@ public class Dvizhukha_forge {
                 net.minecraft.network.chat.Component.literal("§c⚡ Молния ударила рядом с вами!")
         );
 
+        // Асинхронный спавн хохла с задержкой
         server.execute(() -> {
             try {
                 Thread.sleep(1000);
